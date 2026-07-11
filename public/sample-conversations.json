@@ -1,0 +1,56 @@
+[
+  {
+    "id": "sample-conversation-1",
+    "title": "空想庭園の設計メモ",
+    "create_time": 1767225600,
+    "update_time": 1767225900,
+    "mapping": {
+      "root-1": { "message": null, "parent": null, "children": ["system-1"] },
+      "system-1": { "message": { "id": "message-system-1", "author": { "role": "system" }, "create_time": 1767225601, "content": { "parts": ["架空の案内役として応答します。"] } } },
+      "user-1": { "message": { "id": "message-user-1", "author": { "role": "user" }, "create_time": 1767225610, "content": { "parts": ["雲の上にある小さな庭園の構成を考えて。"] } } },
+      "assistant-1": { "message": { "id": "message-assistant-1", "author": { "role": "assistant" }, "create_time": 1767225620, "content": { "parts": ["中央に雨粒の池、周囲に風で鳴る草花を配置する案です。"] } } }
+    }
+  },
+  {
+    "id": "sample-conversation-2",
+    "title": "架空の星祭り献立",
+    "create_time": 1767312000,
+    "update_time": 1767312300,
+    "mapping": {
+      "root-2": { "message": null, "parent": null, "children": ["user-2"] },
+      "user-2": { "message": { "id": "message-user-2", "author": { "role": "user" }, "create_time": 1767312010, "content": { "parts": ["星祭りをテーマにした軽食を一つ提案して。"] } } },
+      "assistant-2": { "message": { "id": "message-assistant-2", "author": { "role": "assistant" }, "create_time": 1767312020, "content": { "parts": ["三日月形のパンに、紫色の野菜ペーストを添える案はいかがでしょう。"] } } },
+      "empty-2": { "message": { "id": "message-empty-2", "author": { "role": "assistant" }, "create_time": 1767312030, "content": { "parts": ["   "] } } }
+    }
+  },
+  {
+    "title": "月面図書室のアイデア",
+    "create_time": 1767398400,
+    "update_time": 1767398800,
+    "mapping": {
+      "root-3": { "message": null, "parent": null, "children": ["user-3a"] },
+      "user-3a": { "message": { "author": { "role": "user" }, "create_time": 1767398410, "content": { "parts": ["月面の図書室に必要な設備を挙げて。"] } } },
+      "assistant-3": { "message": { "id": "message-assistant-3", "author": { "role": "assistant" }, "create_time": 1767398420, "content": { "parts": ["本の浮遊を防ぐ棚、静音の空調、柔らかな読書灯が必要です。"] } } },
+      "user-3b": { "message": { "id": "message-user-3b", "author": { "role": "user" }, "create_time": 1767398430, "content": { "parts": ["読書灯の形も考えて。"] } } }
+    }
+  }
+,
+  {
+    "id": "fictional-current-path",
+    "title": "Fictional current path example",
+    "create_time": 1767484800,
+    "update_time": 1767484900,
+    "current_node": "assistant-active-2",
+    "mapping": {
+      "root": { "message": null, "parent": null, "children": ["system"] },
+      "system": { "parent": "root", "message": { "id": "fictional-system", "author": { "role": "system" }, "create_time": 1767484801, "content": { "parts": ["Fictional system instruction."] } } },
+      "user-1": { "parent": "system", "message": { "id": "fictional-user-1", "author": { "role": "user" }, "create_time": 1767484810, "content": { "parts": ["Plan a pretend garden layout."] } } },
+      "assistant-1": { "parent": "user-1", "message": { "id": "fictional-assistant-1", "author": { "role": "assistant" }, "create_time": 1767484820, "content": { "parts": ["Here is a fictional layout."] } } },
+      "inactive-assistant": { "parent": "user-1", "message": { "id": "fictional-inactive", "author": { "role": "assistant" }, "create_time": 1767484821, "content": { "parts": ["This regenerated branch is inactive."] } } },
+      "user-2": { "parent": "assistant-1", "message": { "id": "fictional-user-2", "author": { "role": "user" }, "create_time": 1767484830, "content": { "parts": ["Add a fictional pond."] } } },
+      "tool": { "parent": "user-2", "message": { "id": "fictional-tool", "author": { "role": "tool" }, "create_time": 1767484831, "content": { "parts": ["tool result: imaginary dimensions"] } } },
+      "empty-assistant": { "parent": "tool", "message": { "id": "fictional-empty", "author": { "role": "assistant" }, "create_time": 1767484832, "content": { "parts": ["   "] } } },
+      "assistant-active-2": { "parent": "empty-assistant", "message": { "id": "fictional-assistant-2", "author": { "role": "assistant" }, "create_time": 1767484840, "content": { "parts": ["The imaginary pond fits beside the path."] } } }
+    }
+  }
+]
