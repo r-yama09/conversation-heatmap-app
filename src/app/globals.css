@@ -292,3 +292,23 @@ body {
 @media (max-width: 380px) {
   .dashboard-hero h1 { max-width: 11ch; font-size: 2.22rem; }
 }
+
+.frequent-words-panel { margin-top: 30px; padding: clamp(22px, 3.4vw, 32px); }
+.frequent-words-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.frequent-words-heading h2 { margin:0; font-size:1.55rem; font-weight:730; letter-spacing:-.03em; }
+.frequent-words-heading p { margin:7px 0 0; color:var(--text-muted); font-size:.86rem; }
+.frequent-words-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:18px 0 0; }
+.frequent-words-summary .data-tile { padding:14px 15px; }
+.frequent-words-summary .data-tile dd { font-size:1.1rem; }
+.frequent-words-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 22px; margin:20px 0 0; padding:0; list-style:none; }
+.frequent-words-list li { display:grid; grid-template-columns:28px minmax(0,1fr); gap:10px; align-items:center; padding:12px 0; border-top:1px solid var(--border); }
+.frequent-word-rank { display:grid; width:26px; height:26px; place-items:center; border-radius:50%; background:var(--surface-strong); color:var(--text-muted); font-size:.75rem; font-weight:800; }
+.frequent-word-token { min-width:0; overflow-wrap:anywhere; font-size:.96rem; font-weight:750; }
+.frequent-word-count { grid-column:2; color:var(--text-muted); font-size:.78rem; }
+.frequent-words-empty { margin:20px 0 0; color:var(--text-muted); font-size:.9rem; }
+
+@media (max-width: 720px) {
+  .frequent-words-panel { padding:21px 18px; }
+  .frequent-words-summary { grid-template-columns:1fr; }
+  .frequent-words-list { grid-template-columns:1fr; }
+}

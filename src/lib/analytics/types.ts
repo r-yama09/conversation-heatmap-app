@@ -9,3 +9,16 @@ export type WeekdayHourHeatmapResult = {
   excludedMessageCount: number;
   timeZone: "Asia/Tokyo";
 };
+
+export type FrequentWord = {
+  token: string;
+  count: number;
+  messageCount: number;
+};
+
+export type FrequentWordsResult = {
+  words: FrequentWord[];
+  analyzedMessageCount: number;
+  matchedMessageCount: number;
+  excludedMessageCount: number;
+};
