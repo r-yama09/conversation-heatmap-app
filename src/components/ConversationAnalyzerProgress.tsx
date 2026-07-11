@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { parseChatGptExportAsync } from "@/lib/chatgpt-export/parser";
 import type { AnalysisProgress, ParsedExport } from "@/lib/chatgpt-export/types";
+import { createWeekdayHourHeatmap } from "@/lib/analytics/heatmap";
+import WeekdayHourHeatmap from "@/components/WeekdayHourHeatmap";
 
 type AnalyzerPhase = "idle" | "ready" | "analyzing" | "stopping" | "partial-ready" | "complete" | "partial" | "error";
 
@@ -36,6 +38,7 @@ export default function ConversationAnalyzerProgress() {
   const mountedRef = useRef(true);
   const isAnalyzing = phase === "analyzing" || phase === "stopping";
   const isPartial = phase === "partial";
+  const heatmap = result ? createWeekdayHourHeatmap(result.messages) : null;
 
   useEffect(() => () => {
     mountedRef.current = false;
@@ -149,7 +152,11 @@ export default function ConversationAnalyzerProgress() {
 
         {error && <div role="alert" className="mt-6 rounded-xl border border-red-300 bg-red-50 p-4 text-red-900"><p className="font-bold">解析できませんでした</p><p className="mt-1 text-sm leading-6">{error}</p></div>}
 
-        {result && <><section className="mt-8" aria-labelledby="stats-heading"><div className="flex flex-wrap items-end justify-between gap-3"><h2 id="stats-heading" className="text-2xl font-bold">基本統計</h2><p className="text-sm font-medium text-slate-600 dark:text-slate-300">{isPartial ? "途中結果" : "解析完了"}</p></div>{isPartial && <p className="mt-2 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-950 dark:bg-amber-950 dark:text-amber-50">途中結果です。全データの解析結果ではありません。{progress && ` 処理済み ${progress.processedConversations} / ${progress.totalConversations} 会話`}</p>}<div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">{statLabels.map(([key, label]) => <article key={key} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-5"><p className="text-sm font-medium text-slate-600 dark:text-slate-300">{label}</p><p className="mt-2 text-3xl font-bold tabular-nums">{result.stats[key].toLocaleString("ja-JP")}<span className="ml-1 text-sm font-medium text-slate-500">件</span></p></article>)}</div><p className="mt-3 text-sm text-slate-600 dark:text-slate-300">会話メッセージ数は、自分＋AI（自分の発言数＋AI返信数）の合計です。</p></section><section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-7" aria-labelledby="titles-heading"><div className="flex items-baseline justify-between gap-4"><h2 id="titles-heading" className="text-2xl font-bold">会話タイトル</h2><span className="text-sm text-slate-500">{result.conversations.length}件</span></div><ol className="mt-5 divide-y divide-slate-200 dark:divide-slate-700">{result.conversations.map((conversation, index) => <li key={conversation.conversationId} className="flex gap-3 py-4 first:pt-0 last:pb-0"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">{index + 1}</span><div className="min-w-0"><p className="break-words font-semibold">{conversation.title}</p><p className="mt-1 text-sm text-slate-500">統計対象 {conversation.messageCount}件（自分 {conversation.userMessageCount}件 / AI {conversation.assistantMessageCount}件）</p></div></li>)}</ol></section></>}
+        {result && <>
+          <section className="mt-8" aria-labelledby="stats-heading"><div className="flex flex-wrap items-end justify-between gap-3"><h2 id="stats-heading" className="text-2xl font-bold">基本統計</h2><p className="text-sm font-medium text-slate-600 dark:text-slate-300">{isPartial ? "途中結果" : "解析完了"}</p></div>{isPartial && <p className="mt-2 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-950 dark:bg-amber-950 dark:text-amber-50">途中結果です。全データの解析結果ではありません。{progress && ` 処理済み ${progress.processedConversations} / ${progress.totalConversations} 会話`}</p>}<div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">{statLabels.map(([key, label]) => <article key={key} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-5"><p className="text-sm font-medium text-slate-600 dark:text-slate-300">{label}</p><p className="mt-2 text-3xl font-bold tabular-nums">{result.stats[key].toLocaleString("ja-JP")}<span className="ml-1 text-sm font-medium text-slate-500">件</span></p></article>)}</div><p className="mt-3 text-sm text-slate-600 dark:text-slate-300">会話メッセージ数は、自分＋AI（自分の発言数＋AI返信数）の合計です。</p></section>
+          {heatmap && <WeekdayHourHeatmap heatmap={heatmap} isPartial={isPartial} />}
+          <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-7" aria-labelledby="titles-heading"><div className="flex items-baseline justify-between gap-4"><h2 id="titles-heading" className="text-2xl font-bold">会話タイトル</h2><span className="text-sm text-slate-500">{result.conversations.length}件</span></div><ol className="mt-5 divide-y divide-slate-200 dark:divide-slate-700">{result.conversations.map((conversation, index) => <li key={conversation.conversationId} className="flex gap-3 py-4 first:pt-0 last:pb-0"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">{index + 1}</span><div className="min-w-0"><p className="break-words font-semibold">{conversation.title}</p><p className="mt-1 text-sm text-slate-500">統計対象 {conversation.messageCount}件（自分 {conversation.userMessageCount}件 / AI {conversation.assistantMessageCount}件）</p></div></li>)}</ol></section>
+        </>}
       </div>
     </main>
   );
