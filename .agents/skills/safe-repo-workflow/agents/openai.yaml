@@ -1,0 +1,7 @@
+interface:
+  display_name: "安全リポジトリ作業"
+  short_description: "Gitと公開前の安全確認を共通化する作業ガイド"
+  default_prompt: "Use `$safe-repo-workflow` to verify repository safety before editing, testing, committing, branching, or pushing."
+
+policy:
+  allow_implicit_invocation: true
