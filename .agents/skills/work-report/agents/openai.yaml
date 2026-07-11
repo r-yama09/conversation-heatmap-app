@@ -1,0 +1,7 @@
+interface:
+  display_name: "Work向け報告書"
+  short_description: "現在のCodex作業をWorkへ渡せる形式で整理"
+  default_prompt: "Use `$work-report` to read the current work read-only and generate a ChatGPT Work report."
+
+policy:
+  allow_implicit_invocation: false
