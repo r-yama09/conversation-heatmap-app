@@ -4,4 +4,4 @@ interface:
   default_prompt: "Use `$work-report` to read the current work read-only and generate a ChatGPT Work report."
 
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

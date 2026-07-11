@@ -1,7 +1,13 @@
 ---
 name: work-report
-description: Generate a Japanese Markdown work report for ChatGPT Work from the current Codex task and repository state. Use only when the user explicitly selects this skill or invokes $work-report; never invoke implicitly.
+description: Generate a Japanese Markdown work report for ChatGPT Work from the current Codex task and repository state. Use for automatic end-of-task reports and when the user explicitly invokes $work-report.
 ---
+
+## Invocation policy
+
+This skill may be used for the repository's automatic end-of-task report as well as for an explicit `$work-report` request. Automatic reports should be concise; explicit `$work-report` requests should use the detailed format below.
+
+The report remains read-only: do not edit files, create commits, push, install dependencies, or rerun test, lint, or build solely for reporting. Use the most recent verified results from the task and mark unknown information as `未確認`.
 
 # Work向け作業報告書
 
@@ -11,7 +17,7 @@ description: Generate a Japanese Markdown work report for ChatGPT Work from the 
 
 ## 実行条件
 
-- ユーザーがスキル一覧から選択した場合、または `$work-report` を明示した場合だけ実行する。
+- ユーザーがスキル一覧から選択した場合、`$work-report` を明示した場合、またはリポジトリの終了時自動報告として実行する。
 - 作業対象は `D:\projects\conversation-heatmap-app` に限定する。
 - ファイルを作成・編集・削除しない。
 - commit、push、ブランチ変更を行わない。
