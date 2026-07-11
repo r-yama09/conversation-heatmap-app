@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseChatGptExport } from "./parser";
+import { parseChatGptExport, parseChatGptExportAsync } from "./parser";
 import { ChatGptExportParseError } from "./types";
 
 type Role = "user" | "assistant" | "system" | "tool";
@@ -100,5 +100,79 @@ describe("parseChatGptExport", () => {
     expect(result.messages[0]).toMatchObject({ role: "unknown", createdAt: null });
     expect(result.stats).toEqual({ conversationCount: 2, messageCount: 0, userMessageCount: 0, assistantMessageCount: 0 });
     expect(() => parseChatGptExport([])).toThrow(ChatGptExportParseError);
+  });
+
+  it("generates stable, unique fallback IDs and preserves source IDs across synchronous and asynchronous parsing", async () => {
+    const input = [
+      { mapping: { same: { message: message("user", ["first"], 1) } } },
+      { mapping: { same: { message: message("assistant", ["second"], 2) } } },
+      { id: "source-conversation", mapping: { node: { message: { ...message("user", ["third"], 3), id: "source-message" } } } },
+    ];
+    const firstSyncResult = parseChatGptExport(input);
+    const secondSyncResult = parseChatGptExport(input);
+    const asyncResult = await parseChatGptExportAsync(input, { batchSize: 1 });
+    const syncIdentifiers = firstSyncResult.messages.map((item) => ({ conversationId: item.conversationId, messageId: item.messageId }));
+
+    expect(firstSyncResult.conversations.map((item) => item.conversationId)).toEqual(["conversation-fallback-0", "conversation-fallback-1", "source-conversation"]);
+    expect(syncIdentifiers).toEqual([
+      { conversationId: "conversation-fallback-0", messageId: "conversation-fallback-0:same" },
+      { conversationId: "conversation-fallback-1", messageId: "conversation-fallback-1:same" },
+      { conversationId: "source-conversation", messageId: "source-message" },
+    ]);
+    expect(new Set(firstSyncResult.messages.map((item) => item.messageId)).size).toBe(firstSyncResult.messages.length);
+    expect(secondSyncResult.messages.map((item) => ({ conversationId: item.conversationId, messageId: item.messageId }))).toEqual(syncIdentifiers);
+    expect(asyncResult.result.messages.map((item) => ({ conversationId: item.conversationId, messageId: item.messageId }))).toEqual(syncIdentifiers);
+  });
+
+  it("returns the same statistics as the synchronous parser and preserves the current_node path", async () => {
+    const input = [{ id: "async-path", current_node: "assistant", mapping: {
+      root: { parent: null, message: null },
+      user: { parent: "root", message: message("user", ["question"], 1) },
+      assistant: { parent: "user", message: message("assistant", ["answer"], 2) },
+      inactive: { parent: "user", message: message("assistant", ["inactive"], 3) },
+    } }];
+    const asyncResult = await parseChatGptExportAsync(input, { batchSize: 1 });
+
+    expect(asyncResult.aborted).toBe(false);
+    expect(asyncResult.result.stats).toEqual(parseChatGptExport(input).stats);
+    expect(asyncResult.result.messages.map((item) => item.text)).toEqual(["question", "answer"]);
+  });
+
+  it("reports non-decreasing progress through completion, including invalid elements", async () => {
+    const progress = [] as number[];
+    const input = [
+      { id: "first", mapping: { user: { message: message("user", ["one"], 1) } } },
+      null,
+      { id: "last", mapping: { assistant: { message: message("assistant", ["two"], 2) } } },
+    ];
+    const asyncResult = await parseChatGptExportAsync(input, { batchSize: 1, onProgress: (item) => progress.push(item.percentage) });
+
+    expect(asyncResult.result.stats).toEqual({ conversationCount: 2, messageCount: 2, userMessageCount: 1, assistantMessageCount: 1 });
+    expect(progress).toEqual([...progress].sort((left, right) => left - right));
+    expect(progress.at(-1)).toBe(100);
+  });
+
+  it("returns partial results when cancellation is requested between conversation batches", async () => {
+    const controller = new AbortController();
+    const input = Array.from({ length: 4 }, (_, index) => ({ id: `conversation-${index}`, mapping: {
+      user: { message: message("user", [`message-${index}`], index) },
+    } }));
+    const asyncResult = await parseChatGptExportAsync(input, {
+      batchSize: 1,
+      signal: controller.signal,
+      onProgress: (item) => { if (item.processedConversations === 1) controller.abort(); },
+    });
+
+    expect(asyncResult.aborted).toBe(true);
+    expect(asyncResult.result.stats).toEqual({ conversationCount: 1, messageCount: 1, userMessageCount: 1, assistantMessageCount: 0 });
+  });
+
+  it("keeps progress calculations safe for an empty mapping and rejects an empty export like the synchronous parser", async () => {
+    const progress = [] as number[];
+    const asyncResult = await parseChatGptExportAsync([{ id: "empty", mapping: {} }], { onProgress: (item) => progress.push(item.percentage) });
+
+    expect(asyncResult.result.stats).toEqual({ conversationCount: 1, messageCount: 0, userMessageCount: 0, assistantMessageCount: 0 });
+    expect(progress.at(-1)).toBe(100);
+    await expect(parseChatGptExportAsync([])).rejects.toBeInstanceOf(ChatGptExportParseError);
   });
 });

@@ -1,4 +1,4 @@
-import { ChatGptExportParseError, type MessageRole, type NormalizedConversation, type NormalizedMessage, type ParsedExport } from "./types";
+import { ChatGptExportParseError, type AnalysisProgress, type AsyncParseOptions, type AsyncParseResult, type MessageRole, type NormalizedConversation, type NormalizedMessage, type ParsedExport } from "./types";
 
 type UnknownRecord = Record<string, unknown>;
 const isRecord = (value: unknown): value is UnknownRecord => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -48,7 +48,7 @@ export function parseChatGptExport(input: unknown): ParsedExport {
 
   input.forEach((rawConversation, conversationIndex) => {
     if (!isRecord(rawConversation) || !isRecord(rawConversation.mapping)) return;
-    const conversationId = nonEmptyString(rawConversation.id) ?? `conversation-${conversationIndex + 1}`;
+    const conversationId = nonEmptyString(rawConversation.id) ?? `conversation-fallback-${conversationIndex}`;
     const title = nonEmptyString(rawConversation.title) ?? "無題の会話";
     const conversationMessages: NormalizedMessage[] = [];
 
@@ -63,7 +63,7 @@ export function parseChatGptExport(input: unknown): ParsedExport {
       const author = isRecord(rawMessage.author) ? rawMessage.author : null;
       conversationMessages.push({
         conversationId,
-        messageId: nonEmptyString(rawMessage.id) ?? nonEmptyString(nodeId) ?? `${conversationId}-message-${nodeIndex + 1}`,
+        messageId: nonEmptyString(rawMessage.id) ?? `${conversationId}:${nodeId || `message-${nodeIndex + 1}`}`,
         title,
         role: normalizeRole(author?.role),
         text,
@@ -99,4 +99,86 @@ export function parseChatGptExport(input: unknown): ParsedExport {
     messages,
     stats: { conversationCount: conversations.length, messageCount: userMessageCount + assistantMessageCount, userMessageCount, assistantMessageCount },
   };
+}
+
+function emptyParsedExport(): ParsedExport {
+  return {
+    conversations: [],
+    messages: [],
+    stats: { conversationCount: 0, messageCount: 0, userMessageCount: 0, assistantMessageCount: 0 },
+  };
+}
+
+function finalizeParsedExport(result: ParsedExport): ParsedExport {
+  const userMessageCount = result.messages.filter((message) => message.role === "user").length;
+  const assistantMessageCount = result.messages.filter((message) => message.role === "assistant").length;
+  result.stats = {
+    conversationCount: result.conversations.length,
+    messageCount: userMessageCount + assistantMessageCount,
+    userMessageCount,
+    assistantMessageCount,
+  };
+  return result;
+}
+
+function progressFor(processedConversations: number, totalConversations: number, extractedMessageCount: number): AnalysisProgress {
+  return {
+    processedConversations,
+    totalConversations,
+    extractedMessageCount,
+    percentage: totalConversations === 0 ? 100 : Math.min(100, Math.max(0, Math.round((processedConversations / totalConversations) * 100))),
+  };
+}
+
+function conversationWithStableId(rawConversation: unknown, conversationIndex: number): unknown {
+  if (!isRecord(rawConversation) || nonEmptyString(rawConversation.id)) return rawConversation;
+  return { ...rawConversation, id: `conversation-fallback-${conversationIndex}` };
+}
+
+function isNoValidConversationsError(error: unknown): boolean {
+  return error instanceof ChatGptExportParseError && error.code === "NO_VALID_CONVERSATIONS";
+}
+
+function yieldToBrowser(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+export async function parseChatGptExportAsync(input: unknown, options: AsyncParseOptions = {}): Promise<AsyncParseResult> {
+  if (!Array.isArray(input)) return { result: parseChatGptExport(input), aborted: false };
+  if (input.length === 0) return { result: parseChatGptExport(input), aborted: false };
+
+  const batchSize = Math.max(1, Math.floor(options.batchSize ?? 25));
+  const result = emptyParsedExport();
+  const totalConversations = input.length;
+  let processedConversations = 0;
+  let extractedMessageCount = 0;
+  let lastPercentage = 0;
+  const notifyProgress = () => {
+    const progress = progressFor(processedConversations, totalConversations, extractedMessageCount);
+    progress.percentage = Math.max(lastPercentage, progress.percentage);
+    lastPercentage = progress.percentage;
+    options.onProgress?.(progress);
+  };
+
+  notifyProgress();
+  for (let index = 0; index < input.length; index += 1) {
+    if (options.signal?.aborted) return { result: finalizeParsedExport(result), aborted: true };
+    try {
+      const parsedConversation = parseChatGptExport([conversationWithStableId(input[index], index)]);
+      result.conversations.push(...parsedConversation.conversations);
+      result.messages.push(...parsedConversation.messages);
+      extractedMessageCount += parsedConversation.messages.length;
+    } catch (error) {
+      if (!isNoValidConversationsError(error)) throw error;
+    }
+    processedConversations += 1;
+
+    if (processedConversations % batchSize === 0 || processedConversations === totalConversations) {
+      notifyProgress();
+      if (processedConversations < totalConversations) await yieldToBrowser();
+    }
+  }
+
+  if (!result.conversations.length) parseChatGptExport([]);
+  return { result: finalizeParsedExport(result), aborted: false };
 }
