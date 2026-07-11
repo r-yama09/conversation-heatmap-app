@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { parseChatGptExport } from "../chatgpt-export/parser";
+import { ENGLISH_STOP_WORDS, JAPANESE_STOP_WORDS } from "./dictionaries";
 import type { NormalizedMessage } from "@/lib/chatgpt-export/types";
 import { createFrequentWords } from "./frequentWords";
 
@@ -29,6 +30,20 @@ describe("createFrequentWords", () => {
     expect(result.words.map((word) => word.token)).not.toContain("123");
     expect(result.words.map((word) => word.token)).not.toContain("です");
     expect(result.words.map((word) => word.token)).not.toContain("example");
+  });
+
+  it("keeps meaningful Japanese one-character nouns and excludes particle stop words", () => {
+    const result = createFrequentWords([message("user", "車 車 株 膜 熱 金 は が を に", "user-1")]);
+    expect(new Set(result.words.map((word) => word.token))).toEqual(new Set(["車", "株", "膜", "熱", "金"]));
+    expect(result.words.find((word) => word.token === "車")).toMatchObject({ count: 2, messageCount: 1 });
+  });
+
+  it("keeps the Japanese and English dictionaries independently extensible", () => {
+    expect(JAPANESE_STOP_WORDS.has("は")).toBe(true);
+    expect(JAPANESE_STOP_WORDS.has("車")).toBe(false);
+    expect(ENGLISH_STOP_WORDS.has("the")).toBe(true);
+    const result = createFrequentWords([message("user", "THE the API", "user-1")]);
+    expect(result.words.map((word) => word.token)).toEqual(["api"]);
   });
 
   it("uses deterministic tie ordering and respects the limit", () => {

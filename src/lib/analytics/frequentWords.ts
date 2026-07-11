@@ -1,17 +1,13 @@
 import type { NormalizedMessage } from "@/lib/chatgpt-export/types";
+import { FREQUENT_WORD_STOP_WORDS } from "./dictionaries";
 import type { FrequentWord, FrequentWordsResult } from "./types";
-
-export const FREQUENT_WORD_STOP_WORDS: ReadonlySet<string> = new Set([
-  "これ", "それ", "あれ", "ここ", "そこ", "ため", "もの", "こと", "よう",
-  "です", "ます", "する", "した", "して", "いる", "ある", "なる", "ない",
-  "ください", "お願い", "自分", "なんか", "あと", "でも", "から", "まで", "ので",
-]);
 
 const DEFAULT_LIMIT = 20;
 const URL_PATTERN = /(?:https?:\/\/|www\.)\S+/giu;
 const VALID_TOKEN_PATTERN = /^[\p{L}\p{N}\p{M}]+$/u;
 const LETTER_PATTERN = /\p{L}/u;
 const NUMBER_ONLY_PATTERN = /^\p{N}+$/u;
+const JAPANESE_TOKEN_PATTERN = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
 
 type Segment = { segment: string; isWordLike?: boolean };
 
@@ -30,9 +26,10 @@ function normalizeToken(value: string): string {
 }
 
 function isUsableToken(value: string): boolean {
-  if (!value || value.length < 2) return false;
+  if (!value) return false;
   if (!VALID_TOKEN_PATTERN.test(value) || !LETTER_PATTERN.test(value)) return false;
   if (NUMBER_ONLY_PATTERN.test(value)) return false;
+  if (Array.from(value).length === 1 && !JAPANESE_TOKEN_PATTERN.test(value)) return false;
   return !FREQUENT_WORD_STOP_WORDS.has(value);
 }
 
