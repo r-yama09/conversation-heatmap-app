@@ -312,3 +312,31 @@ body {
   .frequent-words-summary { grid-template-columns:1fr; }
   .frequent-words-list { grid-template-columns:1fr; }
 }
+
+.monthly-activity-panel { margin-top:30px; padding:clamp(22px, 3.4vw, 32px); }
+.monthly-activity-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.monthly-activity-heading h2 { margin:0; font-size:1.55rem; font-weight:730; letter-spacing:-.03em; }
+.monthly-activity-heading p { margin:7px 0 0; color:var(--text-muted); font-size:.86rem; }
+.monthly-activity-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:18px 0 0; }
+.monthly-activity-summary .data-tile { min-width:0; padding:14px 15px; }
+.monthly-activity-summary .data-tile dd { margin-top:5px; overflow-wrap:anywhere; font-size:.95rem; line-height:1.45; }
+.monthly-activity-chart { display:grid; gap:17px; margin-top:24px; }
+.monthly-activity-row { min-width:0; }
+.monthly-activity-row-heading { display:flex; align-items:baseline; justify-content:space-between; gap:12px; font-size:.9rem; }
+.monthly-activity-row-heading span { color:var(--text); font-variant-numeric:tabular-nums; font-weight:750; }
+.monthly-activity-bar { display:flex; overflow:hidden; height:14px; margin-top:8px; border-radius:999px; background:var(--surface-strong); }
+.monthly-activity-user-bar { min-width:0; background:var(--accent); }
+.monthly-activity-assistant-bar { min-width:0; background:var(--text-muted); opacity:.64; }
+.monthly-activity-details { display:flex; flex-wrap:wrap; gap:7px 16px; margin-top:6px; color:var(--text-muted); font-size:.76rem; }
+.monthly-activity-empty { margin:22px 0 0; color:var(--text-muted); font-size:.9rem; }
+.monthly-activity-note { margin:18px 0 0; color:var(--text-muted); font-size:.8rem; }
+
+@media (max-width: 720px) {
+  .monthly-activity-panel { padding:21px 18px; }
+  .monthly-activity-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width: 430px) {
+  .monthly-activity-summary { grid-template-columns:1fr; }
+  .monthly-activity-details { gap:5px 12px; }
+}

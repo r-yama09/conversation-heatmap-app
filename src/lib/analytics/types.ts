@@ -22,3 +22,20 @@ export type FrequentWordsResult = {
   matchedMessageCount: number;
   excludedMessageCount: number;
 };
+
+export type MonthlyActivityItem = {
+  month: string;
+  conversationCount: number;
+  userMessageCount: number;
+  assistantMessageCount: number;
+  totalMessageCount: number;
+};
+
+export type MonthlyActivityResult = {
+  months: MonthlyActivityItem[];
+  peakTotalMonth: MonthlyActivityItem | null;
+  peakUserMonth: MonthlyActivityItem | null;
+  analyzedMonthCount: number;
+  datedMessageCount: number;
+  excludedUnknownDateCount: number;
+};
