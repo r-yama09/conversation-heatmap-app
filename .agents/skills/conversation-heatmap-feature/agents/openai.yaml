@@ -1,0 +1,7 @@
+interface:
+  display_name: "Conversation Heatmap Feature"
+  short_description: "conversation-heatmap-appの機能実装で共通する設計、UI、テスト規約"
+  default_prompt: "Use `$conversation-heatmap-feature` for feature work in conversation-heatmap-app, together with `$safe-repo-workflow` and `$work-report` where applicable."
+
+policy:
+  allow_implicit_invocation: true
