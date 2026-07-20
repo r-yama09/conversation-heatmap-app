@@ -78,3 +78,41 @@ export type WrappedSummary = {
   longestConversation: WrappedLongestConversation | null;
   insights: string[];
 };
+
+export type AiHandoffUsageSummary = {
+  peakUsage: WrappedPeakUsage;
+  weekdayMessageCounts: Array<{ weekday: HeatmapWeekday; messageCount: number }>;
+  hourMessageCounts: Array<{ hour: number; messageCount: number }>;
+  includedUserMessageCount: number;
+  excludedUnknownDateUserMessageCount: number;
+};
+
+export type AiHandoffWrappedSummary = Omit<WrappedSummary, "longestConversation"> & {
+  longestConversation: Omit<WrappedLongestConversation, "conversationId"> | null;
+};
+
+export type AiHandoffJson = {
+  meta: {
+    schemaVersion: "0.1";
+    generatedAt: string;
+    timeZone: "Asia/Tokyo";
+    period: { startAt: string | null; endAt: string | null; monthCount: number };
+    conversationCount: number;
+    messageCount: number;
+    isPartial: boolean;
+  };
+  summary: {
+    usage: AiHandoffUsageSummary;
+    monthlyActivity: MonthlyActivityResult;
+    frequentWords: FrequentWordsResult;
+    wrapped: AiHandoffWrappedSummary;
+  };
+  compare: {
+    status: "not_compared";
+    reason: string;
+    baseline: null;
+    comparison: null;
+  };
+  todo: string[];
+  instruction: string;
+};

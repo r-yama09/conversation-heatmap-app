@@ -12,6 +12,7 @@ import FrequentWordsPanel from "@/components/FrequentWordsPanel";
 import MonthlyActivityPanel from "@/components/MonthlyActivityPanel";
 import LocalStoragePanel from "@/components/LocalStoragePanel";
 import WrappedDashboard from "@/components/WrappedDashboard";
+import AiHandoffExportPanel from "@/components/AiHandoffExportPanel";
 
 type AnalyzerPhase = "idle" | "ready" | "analyzing" | "stopping" | "partial-ready" | "complete" | "partial" | "error";
 
@@ -166,6 +167,7 @@ export default function ConversationAnalyzerProgress() {
        <p className="sample-link">形式を確認したい場合は、<a href="/sample-conversations.json" download>架空のサンプルJSON</a>をお試しください。</p>
      </section>
      <LocalStoragePanel result={result} isPartial={isPartial} onLoaded={showLoadedResult} />
+     <AiHandoffExportPanel result={result} isPartial={isPartial} />
      {isAnalyzing && progress && <section className="panel status-panel" aria-labelledby="progress-heading"><div className="status-row"><h2 id="progress-heading">{phase === "stopping" ? "停止しています…" : "分析中"}</h2><p className="status-value">{progress.percentage}%</p></div><progress value={progress.percentage} max={100} aria-label="分析の進捗" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percentage}>{progress.percentage}%</progress><div className="progress-details"><p>処理済み: {progress.processedConversations} / {progress.totalConversations} 会話</p><p>抽出済み: {progress.extractedMessageCount} メッセージ</p></div><div className="status-actions"><button type="button" onClick={requestStop} disabled={phase === "stopping"} className="button button-secondary">{phase === "stopping" ? "停止要求を処理中" : "分析を停止する"}</button></div></section>}
     {phase === "partial-ready" && partialResult && <section className="panel notice-panel" aria-labelledby="partial-heading"><h2 id="partial-heading">分析を停止しました</h2><p>途中結果を表示できます。全データの解析結果ではありません。</p>{progress && <p>処理済み {progress.processedConversations} / {progress.totalConversations} 会話</p>}<div className="notice-actions"><button type="button" onClick={showPartialResult} className="button button-warning">途中結果を表示する</button><button type="button" onClick={discardPartialResult} className="button button-secondary">途中結果を破棄する</button></div></section>}
     {error && <section role="alert" className="panel error-panel"><p><strong>分析できませんでした</strong></p><p>{error}</p></section>}
