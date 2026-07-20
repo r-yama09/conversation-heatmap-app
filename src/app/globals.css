@@ -188,6 +188,17 @@ body {
 .titles-list li { align-items: flex-start; padding: 17px 2px; transition: background-color 140ms ease; }
 .titles-list li:first-child { border-top: 0; }
 .titles-list li:hover { background: color-mix(in srgb, var(--surface-strong) 45%, transparent); }
+.conversation-filters { margin-top: 20px; padding: 17px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface-muted); }
+.conversation-filters h3 { margin: 0; font-size: 1rem; }
+.filter-note { margin: 6px 0 0; color: var(--text-muted); font-size: .8rem; line-height: 1.5; }
+.filter-fields { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr)); gap: 11px; margin-top: 15px; }
+.filter-fields label { display: block; margin-bottom: 6px; color: var(--text); font-size: .78rem; font-weight: 720; }
+.filter-fields input { width: 100%; min-height: 42px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text); padding: 0 10px; }
+.filter-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.filter-actions p { margin: 0; color: var(--text-muted); font-size: .82rem; font-weight: 700; }
+.filter-actions .button { min-height: 38px; padding-inline: 13px; font-size: .8rem; }
+.filter-error { margin: 12px 0 0; color: var(--error); font-size: .82rem; font-weight: 700; }
+.titles-empty { margin: 20px 0 0; padding: 18px; border-radius: 10px; background: var(--surface-muted); color: var(--text-muted); text-align: center; font-size: .88rem; }
 .title-index { margin-left: 7px; background: var(--surface-strong); color: var(--text-muted); }
 .title-text p { font-size: 0.95rem; line-height: 1.55; }
 .title-text small { line-height: 1.5; }
@@ -219,6 +230,9 @@ body {
   .result-heading, .heatmap-heading, .titles-heading { align-items: flex-start; }
   .stat-card { padding: 18px 15px; }
   .heatmap-panel, .titles-panel { padding: 21px 18px; }
+  .filter-fields { grid-template-columns: 1fr; }
+  .filter-actions { align-items: stretch; flex-direction: column; }
+  .filter-actions .button { width: 100%; }
 }
 
 @media (max-width: 430px) {

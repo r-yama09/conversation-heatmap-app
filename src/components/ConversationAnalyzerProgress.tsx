@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnalysisRunGate } from "@/lib/chatgpt-export/analysisRun";
 import { parseChatGptExportAsync } from "@/lib/chatgpt-export/parser";
 import type { AnalysisProgress, ParsedExport } from "@/lib/chatgpt-export/types";
@@ -14,6 +14,7 @@ import MonthlyActivityPanel from "@/components/MonthlyActivityPanel";
 import LocalStoragePanel from "@/components/LocalStoragePanel";
 import WrappedDashboard from "@/components/WrappedDashboard";
 import AiHandoffExportPanel from "@/components/AiHandoffExportPanel";
+import { filterConversations } from "@/lib/analytics/conversationFilters";
 
 type AnalyzerPhase = "idle" | "ready" | "analyzing" | "stopping" | "partial-ready" | "complete" | "partial" | "error";
 
@@ -41,6 +42,10 @@ export default function ConversationAnalyzerProgress() {
   const [partialResult, setPartialResult] = useState<ParsedExport | null>(null);
   const [progress, setProgress] = useState<AnalysisProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [isPreparing, setIsPreparing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const controllerRef = useRef<AbortController | null>(null);
@@ -53,6 +58,12 @@ export default function ConversationAnalyzerProgress() {
   const frequentWords = result ? createFrequentWords(result.messages) : null;
   const monthlyActivity = result ? createMonthlyActivity(result.messages) : null;
   const wrappedSummary = result ? createWrappedSummary(result) : null;
+  const filteredConversations = useMemo(() => result ? filterConversations(result.conversations, result.messages, { query: searchQuery, startDate, endDate }) : { conversations: [], error: null }, [result, searchQuery, startDate, endDate]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setSearchQuery(searchInput), 180);
+    return () => window.clearTimeout(timeout);
+  }, [searchInput]);
 
   useEffect(() => () => {
     mountedRef.current = false;
@@ -65,6 +76,17 @@ export default function ConversationAnalyzerProgress() {
     setPartialResult(null);
     setProgress(null);
     setError(null);
+    setSearchInput("");
+    setSearchQuery("");
+    setStartDate("");
+    setEndDate("");
+  }
+
+  function clearConversationFilters() {
+    setSearchInput("");
+    setSearchQuery("");
+    setStartDate("");
+    setEndDate("");
   }
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -187,7 +209,7 @@ export default function ConversationAnalyzerProgress() {
      {isAnalyzing && progress && <section className="panel status-panel" aria-labelledby="progress-heading"><div className="status-row"><h2 id="progress-heading">{phase === "stopping" ? "停止しています…" : "分析中"}</h2><p className="status-value">{progress.percentage}%</p></div><progress value={progress.percentage} max={100} aria-label="分析の進捗" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percentage}>{progress.percentage}%</progress><div className="progress-details"><p>処理済み: {progress.processedConversations} / {progress.totalConversations} 会話</p><p>抽出済み: {progress.extractedMessageCount} メッセージ</p></div><div className="status-actions"><button type="button" onClick={requestStop} disabled={phase === "stopping"} className="button button-secondary">{phase === "stopping" ? "停止要求を処理中" : "分析を停止する"}</button></div></section>}
     {phase === "partial-ready" && partialResult && <section className="panel notice-panel" aria-labelledby="partial-heading"><h2 id="partial-heading">分析を停止しました</h2><p>途中結果を表示できます。全データの解析結果ではありません。</p>{progress && <p>処理済み {progress.processedConversations} / {progress.totalConversations} 会話</p>}<div className="notice-actions"><button type="button" onClick={showPartialResult} className="button button-warning">途中結果を表示する</button><button type="button" onClick={discardPartialResult} className="button button-secondary">途中結果を破棄する</button></div></section>}
     {error && <section role="alert" className="panel error-panel"><p><strong>分析できませんでした</strong></p><p>{error}</p></section>}
-    {result && <div className="results-section">{wrappedSummary && <WrappedDashboard summary={wrappedSummary} isPartial={isPartial} />}<section aria-labelledby="stats-heading"><div className="result-heading"><h2 id="stats-heading">基本統計</h2><p className="result-status">{isPartial ? "途中結果" : "分析完了"}</p></div>{isPartial && <p className="partial-banner">途中結果です。全データの解析結果ではありません。{progress && ` 処理済み ${progress.processedConversations} / ${progress.totalConversations} 会話`}</p>}<div className="stats-grid">{statLabels.map(([key, label]) => <article key={key} className="stat-card"><p>{label}</p><p className="stat-value">{result.stats[key].toLocaleString("ja-JP")}<span className="stat-unit">件</span></p><p>{key === "messageCount" ? "自分＋AI" : key === "userMessageCount" ? "ヒートマップの対象" : key === "assistantMessageCount" ? "会話経路上の返信" : "解析した会話の数"}</p></article>)}</div><p className="stats-note">会話メッセージ数は、自分の発言数とAI返信数の合計です。system・tool・空メッセージは含みません。</p></section>{monthlyActivity && <MonthlyActivityPanel result={monthlyActivity} isPartial={isPartial} />}{heatmap && <WeekdayHourHeatmap heatmap={heatmap} isPartial={isPartial} />}{frequentWords && <FrequentWordsPanel result={frequentWords} isPartial={isPartial} />}<section className="panel titles-panel" aria-labelledby="titles-heading"><div className="titles-heading"><h2 id="titles-heading">会話タイトル</h2><span className="titles-count">{result.conversations.length}件</span></div><ol className="titles-list">{result.conversations.map((conversation, index) => <li key={conversation.conversationId}><span className="title-index">{index + 1}</span><div className="title-text"><p>{conversation.title}</p><small>会話メッセージ {conversation.messageCount}件 · 自分 {conversation.userMessageCount}件 / AI {conversation.assistantMessageCount}件</small></div></li>)}</ol></section></div>}
+     {result && <div className="results-section">{wrappedSummary && <WrappedDashboard summary={wrappedSummary} isPartial={isPartial} />}<section aria-labelledby="stats-heading"><div className="result-heading"><h2 id="stats-heading">基本統計</h2><p className="result-status">{isPartial ? "途中結果" : "分析完了"}</p></div>{isPartial && <p className="partial-banner">途中結果です。全データの解析結果ではありません。{progress && ` 処理済み ${progress.processedConversations} / ${progress.totalConversations} 会話`}</p>}<div className="stats-grid">{statLabels.map(([key, label]) => <article key={key} className="stat-card"><p>{label}</p><p className="stat-value">{result.stats[key].toLocaleString("ja-JP")}<span className="stat-unit">件</span></p><p>{key === "messageCount" ? "自分＋AI" : key === "userMessageCount" ? "ヒートマップの対象" : key === "assistantMessageCount" ? "会話経路上の返信" : "解析した会話の数"}</p></article>)}</div><p className="stats-note">会話メッセージ数は、自分の発言数とAI返信数の合計です。system・tool・空メッセージは含みません。</p></section>{monthlyActivity && <MonthlyActivityPanel result={monthlyActivity} isPartial={isPartial} />}{heatmap && <WeekdayHourHeatmap heatmap={heatmap} isPartial={isPartial} />}{frequentWords && <FrequentWordsPanel result={frequentWords} isPartial={isPartial} />}<section className="panel titles-panel" aria-labelledby="titles-heading"><div className="titles-heading"><h2 id="titles-heading">会話タイトル</h2><span className="titles-count">{filteredConversations.conversations.length} / {result.conversations.length}件</span></div><div className="conversation-filters" aria-labelledby="conversation-filters-heading"><h3 id="conversation-filters-heading">会話一覧を検索・絞り込み</h3><p className="filter-note">検索と期間フィルタは会話タイトル一覧だけに適用され、集計結果は変わりません。</p><div className="filter-fields"><div><label htmlFor="conversation-search">キーワード</label><input id="conversation-search" type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="タイトルや本文を検索" /></div><div><label htmlFor="conversation-start-date">開始日</label><input id="conversation-start-date" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></div><div><label htmlFor="conversation-end-date">終了日</label><input id="conversation-end-date" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></div></div><div className="filter-actions"><p role="status" aria-live="polite">該当件数: {filteredConversations.conversations.length}件</p><button type="button" className="button button-secondary" onClick={clearConversationFilters}>フィルタを解除</button></div>{filteredConversations.error && <p className="filter-error" role="alert">{filteredConversations.error}</p>}</div>{!filteredConversations.error && (filteredConversations.conversations.length ? <ol className="titles-list">{filteredConversations.conversations.map((conversation, index) => <li key={conversation.conversationId}><span className="title-index">{index + 1}</span><div className="title-text"><p>{conversation.title}</p><small>会話メッセージ {conversation.messageCount}件 · 自分 {conversation.userMessageCount}件 / AI {conversation.assistantMessageCount}件</small></div></li>)}</ol> : <p className="titles-empty" role="status">条件に一致する会話はありません。</p>)}</section></div>}
   </>;
 
 }
