@@ -30,11 +30,17 @@ describe("createAiHandoffJson", () => {
     expect(result.todo.length).toBeGreaterThan(0);
   });
 
-  it("excludes full message bodies, message arrays, filenames, paths, and conversation ids", () => {
-    const source = parsed([message("user", "this complete private message must not appear", Date.UTC(2024, 0, 1) / 1000, "private-conversation-id")]);
+  it("excludes full message bodies, titles, message arrays, filenames, paths, and conversation ids", () => {
+    const conversationId = "private-conversation-id";
+    const source = parsed(
+      [message("user", "this complete private message must not appear", Date.UTC(2024, 0, 1) / 1000, conversationId)],
+      [{ conversationId, title: "private conversation title must not appear", createdAt: Date.UTC(2024, 0, 1) / 1000, updatedAt: null, messageCount: 1, userMessageCount: 1, assistantMessageCount: 0 }],
+    );
     const json = serializeAiHandoffJson(source, { generatedAt: GENERATED_AT });
     expect(json).not.toContain("this complete private message must not appear");
+    expect(json).not.toContain("private conversation title must not appear");
     expect(json).not.toContain("private-conversation-id");
+    expect(createAiHandoffJson(source, { generatedAt: GENERATED_AT }).summary.wrapped.longestConversation).not.toHaveProperty("title");
     expect(json).not.toContain("conversations.json");
     expect(json).not.toMatch(/"messages"\s*:/);
     expect(json).not.toMatch(/"text"\s*:/);

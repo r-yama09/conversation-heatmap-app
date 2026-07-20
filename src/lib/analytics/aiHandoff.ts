@@ -41,7 +41,6 @@ function handoffWrappedSummary(input: ParsedExport): AiHandoffWrappedSummary {
   return {
     ...withoutLongestConversation,
     longestConversation: longestConversation ? {
-      title: longestConversation.title,
       messageCount: longestConversation.messageCount,
       userMessageCount: longestConversation.userMessageCount,
       assistantMessageCount: longestConversation.assistantMessageCount,

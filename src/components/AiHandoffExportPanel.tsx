@@ -35,7 +35,7 @@ export default function AiHandoffExportPanel({ result, isPartial }: { result: Pa
     <div className="ai-handoff-heading"><div><h2 id="ai-handoff-heading">AI向け引き継ぎJSON</h2><p>会話本文を含めず、集計結果だけを機械可読なJSONとしてこの端末で生成します。</p></div><span className="result-status">schema v0.1</span></div>
     {isPartial && result && <p className="partial-banner">途中結果であることをJSONにも明記して出力します。</p>}
     {!result && <p className="ai-handoff-note">解析結果または保存済みデータが未読込のため、まだダウンロードできません。</p>}
-    <button type="button" className="button button-secondary" onClick={download} disabled={!result} aria-describedby="ai-handoff-privacy-note">引き継ぎJSONをダウンロード</button>
+    <div className="ai-handoff-actions"><button type="button" className="button button-secondary ai-handoff-download" onClick={download} disabled={!result} aria-describedby="ai-handoff-privacy-note">引き継ぎJSONをダウンロード</button></div>
     <p id="ai-handoff-privacy-note" className="ai-handoff-note">元会話本文、メッセージ本文、元ファイル名、ローカルパスは出力しません。</p>
     {feedback && <p className="ai-handoff-feedback" role="status">{feedback}</p>}
     {error && <p className="ai-handoff-error" role="alert">{error}</p>}

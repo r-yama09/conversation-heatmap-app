@@ -88,7 +88,7 @@ export type AiHandoffUsageSummary = {
 };
 
 export type AiHandoffWrappedSummary = Omit<WrappedSummary, "longestConversation"> & {
-  longestConversation: Omit<WrappedLongestConversation, "conversationId"> | null;
+  longestConversation: Omit<WrappedLongestConversation, "conversationId" | "title"> | null;
 };
 
 export type AiHandoffJson = {
