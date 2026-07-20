@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AnalysisRunGate } from "@/lib/chatgpt-export/analysisRun";
 import { parseChatGptExportAsync } from "@/lib/chatgpt-export/parser";
 import type { AnalysisProgress, ParsedExport } from "@/lib/chatgpt-export/types";
 import { createWeekdayHourHeatmap } from "@/lib/analytics/heatmap";
@@ -40,11 +41,13 @@ export default function ConversationAnalyzerProgress() {
   const [partialResult, setPartialResult] = useState<ParsedExport | null>(null);
   const [progress, setProgress] = useState<AnalysisProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isPreparing, setIsPreparing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const controllerRef = useRef<AbortController | null>(null);
-  const runIdRef = useRef(0);
+  const runGateRef = useRef(new AnalysisRunGate());
   const mountedRef = useRef(true);
   const isAnalyzing = phase === "analyzing" || phase === "stopping";
+  const isAnalysisActive = isPreparing || isAnalyzing;
   const isPartial = phase === "partial";
   const heatmap = result ? createWeekdayHourHeatmap(result.messages) : null;
   const frequentWords = result ? createFrequentWords(result.messages) : null;
@@ -54,6 +57,7 @@ export default function ConversationAnalyzerProgress() {
   useEffect(() => () => {
     mountedRef.current = false;
     controllerRef.current?.abort();
+    runGateRef.current.invalidate();
   }, []);
 
   function resetResults() {
@@ -66,7 +70,9 @@ export default function ConversationAnalyzerProgress() {
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const selected = event.target.files?.[0] ?? null;
     controllerRef.current?.abort();
-    runIdRef.current += 1;
+    controllerRef.current = null;
+    runGateRef.current.invalidate();
+    setIsPreparing(false);
     setFile(selected);
     resetResults();
     if (selected && !selected.name.toLowerCase().endsWith(".json")) {
@@ -78,22 +84,30 @@ export default function ConversationAnalyzerProgress() {
   }
 
   async function handleAnalyze() {
-    if (!file || isAnalyzing) return;
+    if (!file || isAnalysisActive) return;
+    const runId = runGateRef.current.begin();
+    if (runId === null) return;
+    setIsPreparing(true);
     resetResults();
     let json: unknown;
     try {
       json = JSON.parse(await file.text()) as unknown;
     } catch {
-      setPhase("error");
-      setError("JSONの構文が正しくありません。ファイル内容を確認してください。");
+      if (mountedRef.current && runGateRef.current.isCurrent(runId)) {
+        setIsPreparing(false);
+        setPhase("error");
+        setError("JSONの構文が正しくありません。ファイル内容を確認してください。");
+      }
+      runGateRef.current.finish(runId);
       return;
     }
 
+    if (!mountedRef.current || !runGateRef.current.isCurrent(runId)) return;
+
     const controller = new AbortController();
-    const runId = runIdRef.current + 1;
-    runIdRef.current = runId;
     controllerRef.current?.abort();
     controllerRef.current = controller;
+    setIsPreparing(false);
     setPhase("analyzing");
     setProgress(emptyProgress());
 
@@ -101,10 +115,10 @@ export default function ConversationAnalyzerProgress() {
       const parsed = await parseChatGptExportAsync(json, {
         signal: controller.signal,
         onProgress: (nextProgress) => {
-          if (mountedRef.current && runIdRef.current === runId) setProgress(nextProgress);
+          if (mountedRef.current && runGateRef.current.isCurrent(runId)) setProgress(nextProgress);
         },
       });
-      if (!mountedRef.current || runIdRef.current !== runId) return;
+      if (!mountedRef.current || !runGateRef.current.isCurrent(runId)) return;
       if (parsed.aborted) {
         setResult(null);
         setPartialResult(parsed.result);
@@ -115,12 +129,14 @@ export default function ConversationAnalyzerProgress() {
         setPhase("complete");
       }
     } catch (caught) {
-      if (!mountedRef.current || runIdRef.current !== runId) return;
+      if (!mountedRef.current || !runGateRef.current.isCurrent(runId)) return;
       setPhase("error");
       setProgress(null);
       setError(caught instanceof Error ? caught.message : "解析中に予期しないエラーが発生しました。");
     } finally {
       if (controllerRef.current === controller) controllerRef.current = null;
+      if (mountedRef.current && runGateRef.current.isCurrent(runId)) setIsPreparing(false);
+      runGateRef.current.finish(runId);
     }
   }
 
@@ -138,7 +154,7 @@ export default function ConversationAnalyzerProgress() {
   }
 
   function discardPartialResult() {
-    runIdRef.current += 1;
+    runGateRef.current.invalidate();
     controllerRef.current?.abort();
     controllerRef.current = null;
     setFile(null);
@@ -161,12 +177,12 @@ export default function ConversationAnalyzerProgress() {
         <h2 id="upload-heading" className="section-heading">会話ファイルを選択</h2>
         <p className="section-description">最初にChatGPTエクスポートの conversations.json を選択してください。ファイルはこのブラウザ内でのみ処理されます。</p>
         <label htmlFor="conversation-file" className="field-label">conversations.json</label>
-        <input ref={inputRef} id="conversation-file" type="file" accept=".json,application/json" disabled={isAnalyzing} onChange={handleFileChange} className="file-input" />
+        <input ref={inputRef} id="conversation-file" type="file" accept=".json,application/json" disabled={isAnalysisActive} onChange={handleFileChange} className="file-input" />
         <dl className="file-details"><div className="data-tile"><dt>選択済みファイル</dt><dd>{file?.name ?? "未選択"}</dd></div><div className="data-tile"><dt>ファイルサイズ</dt><dd>{file ? formatFileSize(file.size) : "—"}</dd></div></dl>
-      </div><button type="button" onClick={handleAnalyze} disabled={!file || isAnalyzing || phase === "error"} className="button button-primary">分析する</button></div>
+      </div><button type="button" onClick={handleAnalyze} disabled={!file || isAnalysisActive || phase === "error"} className="button button-primary">分析する</button></div>
        <p className="sample-link">形式を確認したい場合は、<a href="/sample-conversations.json" download>架空のサンプルJSON</a>をお試しください。</p>
      </section>
-     <LocalStoragePanel result={result} isPartial={isPartial} onLoaded={showLoadedResult} />
+     <LocalStoragePanel result={result} isPartial={isPartial} isAnalysisActive={isAnalysisActive} onLoaded={showLoadedResult} />
      <AiHandoffExportPanel result={result} isPartial={isPartial} />
      {isAnalyzing && progress && <section className="panel status-panel" aria-labelledby="progress-heading"><div className="status-row"><h2 id="progress-heading">{phase === "stopping" ? "停止しています…" : "分析中"}</h2><p className="status-value">{progress.percentage}%</p></div><progress value={progress.percentage} max={100} aria-label="分析の進捗" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percentage}>{progress.percentage}%</progress><div className="progress-details"><p>処理済み: {progress.processedConversations} / {progress.totalConversations} 会話</p><p>抽出済み: {progress.extractedMessageCount} メッセージ</p></div><div className="status-actions"><button type="button" onClick={requestStop} disabled={phase === "stopping"} className="button button-secondary">{phase === "stopping" ? "停止要求を処理中" : "分析を停止する"}</button></div></section>}
     {phase === "partial-ready" && partialResult && <section className="panel notice-panel" aria-labelledby="partial-heading"><h2 id="partial-heading">分析を停止しました</h2><p>途中結果を表示できます。全データの解析結果ではありません。</p>{progress && <p>処理済み {progress.processedConversations} / {progress.totalConversations} 会話</p>}<div className="notice-actions"><button type="button" onClick={showPartialResult} className="button button-warning">途中結果を表示する</button><button type="button" onClick={discardPartialResult} className="button button-secondary">途中結果を破棄する</button></div></section>}

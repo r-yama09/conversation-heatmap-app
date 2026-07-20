@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { canSaveAnalysisResult } from "@/lib/chatgpt-export/analysisRun";
 import type { ParsedExport } from "@/lib/chatgpt-export/types";
 import {
   clearStoredConversations,
@@ -14,6 +15,7 @@ import { IndexedDbStorageError, type SaveResult, type StorageSummary } from "@/l
 type LocalStoragePanelProps = {
   result: ParsedExport | null;
   isPartial: boolean;
+  isAnalysisActive: boolean;
   onLoaded: (result: ParsedExport) => void;
 };
 
@@ -36,7 +38,7 @@ function summaryFromSave(result: SaveResult): StorageSummary {
   };
 }
 
-export default function LocalStoragePanel({ result, isPartial, onLoaded }: LocalStoragePanelProps) {
+export default function LocalStoragePanel({ result, isPartial, isAnalysisActive, onLoaded }: LocalStoragePanelProps) {
   const [summary, setSummary] = useState<StorageSummary>(() => emptyStorageSummary());
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
@@ -58,7 +60,7 @@ export default function LocalStoragePanel({ result, isPartial, onLoaded }: Local
   }, []);
 
   async function handleSave() {
-    if (!result || isPartial || isBusy) return;
+    if (!result || !canSaveAnalysisResult({ hasResult: true, isPartial, isAnalysisActive, isBusy })) return;
     setIsBusy(true);
     setError(null);
     setFeedback(null);
@@ -74,7 +76,7 @@ export default function LocalStoragePanel({ result, isPartial, onLoaded }: Local
   }
 
   async function handleLoad() {
-    if (isBusy) return;
+    if (isAnalysisActive || isBusy) return;
     setIsBusy(true);
     setError(null);
     setFeedback(null);
@@ -90,7 +92,7 @@ export default function LocalStoragePanel({ result, isPartial, onLoaded }: Local
   }
 
   async function handleClear() {
-    if (isBusy || !window.confirm("保存済みデータをすべて削除しますか？")) return;
+    if (isAnalysisActive || isBusy || !window.confirm("保存済みデータをすべて削除しますか？")) return;
     setIsBusy(true);
     setError(null);
     setFeedback(null);
@@ -122,9 +124,9 @@ export default function LocalStoragePanel({ result, isPartial, onLoaded }: Local
     {summary.storedConversationCount === 0 && !isSummaryLoading && <p className="storage-empty">保存データはありません。</p>}
     {isPartial && <p className="storage-note">途中結果は保存できません。解析完了後に保存を選択してください。</p>}
     <div className="storage-actions">
-      <button type="button" className="button button-primary" onClick={handleSave} disabled={!result || isPartial || isBusy}>{isBusy ? "処理中…" : "ブラウザに保存"}</button>
-      <button type="button" className="button button-secondary" onClick={handleLoad} disabled={isBusy}>保存済みデータを読み込む</button>
-      <button type="button" className="button button-danger" onClick={handleClear} disabled={isBusy || summary.storedConversationCount === 0}>保存済みデータをすべて削除</button>
+      <button type="button" className="button button-primary" onClick={handleSave} disabled={!canSaveAnalysisResult({ hasResult: Boolean(result), isPartial, isAnalysisActive, isBusy })}>{isBusy ? "処理中…" : "ブラウザに保存"}</button>
+      <button type="button" className="button button-secondary" onClick={handleLoad} disabled={isAnalysisActive || isBusy}>保存済みデータを読み込む</button>
+      <button type="button" className="button button-danger" onClick={handleClear} disabled={isAnalysisActive || isBusy || summary.storedConversationCount === 0}>保存済みデータをすべて削除</button>
     </div>
     {feedback && <p className="storage-feedback" role="status">{feedback}</p>}
     {error && <p className="storage-error" role="alert">{error}</p>}
