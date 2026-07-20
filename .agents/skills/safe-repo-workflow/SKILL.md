@@ -20,6 +20,63 @@ Use this skill before work that edits files, diagnoses or verifies code, changes
 - For main/feature synchronization, verify ancestry with `merge-base --is-ancestor` and record both refs before changing branches.
 - Stop without editing when the requested branch/base is wrong, staged work is unexpected, user changes are outside scope, or a required fast-forward is impossible. Never overwrite or hide user work.
 
+## Autonomy levels (自走レベル)
+
+Use the autonomy level stated in the user's instruction. When it is omitted, default to **Level 2**. The level permits only the investigation, repair, and revalidation described here; it never overrides the security, privacy, scope, or prohibited-operation rules in this skill.
+
+Codex instructions can state the level concisely:
+
+```text
+自走レベル：2
+```
+
+For Level 3, the instruction must also explicitly authorize integration, normal push, and CI confirmation:
+
+```text
+自走レベル：3
+main統合・通常push・CI確認を許可する
+```
+
+### Level 1 — conservative operation
+
+- Use for high-risk work, including parser changes, IndexedDB schema changes, security work, and Git history cleanup.
+- If an unexpected problem or any validation failure occurs, stop and report it. Do not investigate-and-repair autonomously.
+
+### Level 2 — bounded investigation and repair
+
+- For the current purpose and approved change scope, investigate the cause, repair it, and revalidate for up to **three loops**.
+- May autonomously repair failures from tests, lint, build, and diff checks.
+- May add necessary tests and create additional commits on the same branch when required by those repairs.
+- Use for normal feature work, UI fixes, documentation, and CI fixes.
+
+### Level 3 — delivery-authorized operation
+
+- Includes all Level 2 permissions.
+- Only when the user explicitly grants the Level 3 authorization shown above, may fast-forward integrate into `main`, perform a normal push, and confirm CI.
+- If CI fails due to a minor issue caused by the current change, may repair, revalidate, and push again up to **two times**.
+- Without explicit `main` integration or push authorization, do not integrate or push.
+
+### Shared stop conditions
+
+Stop and report before making the relevant change when any of the following applies:
+
+- The permitted repair-loop count would be exceeded.
+- Adding an external dependency is required.
+- A parser, IndexedDB schema, public schema, or security-policy change is required.
+- A change to a file outside the specified scope is required.
+- A human decision is needed between multiple valid specifications.
+- Data loss or a compatibility break may occur.
+- Force push, rebase, reset, or any history rewrite is required.
+- Unexpected uncommitted changes, remote updates, a Git lock, or branch inconsistency is detected.
+- Access to real logs or an unapproved local location is required.
+
+### Parallel-work rules
+
+- Do not operate multiple Codex Chats concurrently on the same repository and working tree.
+- Parallel work is allowed only when each operation uses a separate Git worktree.
+- If parallel work without worktrees is detected, stop and report it.
+- Even across separate worktrees, do not concurrently edit the same branch or the same file.
+
 ## Security and privacy
 
 - Never read `D:\chatgpt-exports`, project-external logs, or real ChatGPT exports. Use only fictional or explicitly supplied anonymized data.
@@ -30,7 +87,7 @@ Use this skill before work that edits files, diagnoses or verifies code, changes
 
 ## Prohibited operations
 
-Do not run `git reset --hard`, `git clean`, `git restore`, `git checkout -- .`, force push, rebase, history rewriting, branch deletion, bulk deletion, or unapproved merge. Do not change Git configuration, remotes, hooks, `config.toml`, or run `npm audit fix --force`. Do not use `git add .`.
+Do not run `git reset --hard`, `git clean`, `git restore`, `git checkout -- .`, force push, rebase, history rewriting, branch deletion, bulk deletion, or unapproved merge. Do not change Git configuration, remotes, hooks, `config.toml`, or run `npm audit fix --force`. Do not use `git add .`. Level 3 does not relax these prohibitions; it permits only explicitly authorized `merge --ff-only` and normal (non-force) push.
 
 ## Change and dependency rules
 
@@ -49,17 +106,17 @@ Do not run `git reset --hard`, `git clean`, `git restore`, `git checkout -- .`, 
 
 - Stage explicit, reviewed paths only. Confirm `diff --cached`, `diff --cached --check`, and the cached file list before committing.
 - Ensure `package.json`, lockfiles, unrelated app files, secrets, real logs, and generated files are absent unless explicitly requested.
-- Use the exact user-approved commit message. After committing, confirm `status --short --branch`, `rev-parse HEAD`, and the commit summary. Do not amend or create extra commits without authorization.
+- Use the exact user-approved commit message. After committing, confirm `status --short --branch`, `rev-parse HEAD`, and the commit summary. Do not amend. Additional commits require authorization, except that Level 2 or 3 may create a same-branch follow-up commit needed to repair an allowed validation failure.
 
 ## Branch and merge
 
 - Create or switch branches only when requested, preserving the requested naming convention.
 - For a requested fast-forward, verify ancestry first and use only `merge --ff-only`. If it fails, stop and report the refs and reason; do not resolve with merge commits or rebase.
-- Never switch to `main` or delete a branch unless the user explicitly requests it.
+- Never switch to `main` or delete a branch unless the user explicitly requests it. Treat a requested `main` fast-forward as Level 3 work: require both the explicit Level 3 authorization and successful ancestry verification.
 
 ## Push and GitHub
 
-- Push only after explicit authorization and a successful clean-tree/security review. Confirm the intended owner/repository, remote privacy when available, branch, and upstream; mask any credentials in URLs.
+- Push only after explicit authorization and a successful clean-tree/security review. Level 3 authorization may supply that authorization; otherwise, obtain it separately. Confirm the intended owner/repository, remote privacy when available, branch, and upstream; mask any credentials in URLs.
 - For first push use the user-approved upstream form (normally `push -u origin <branch>`). Afterward compare local and remote refs and confirm no unexpected divergence.
 - If GitHub CLI authentication fails, do not retry repeatedly or change credentials. Report the failure and tell the user to run `gh auth login` or refresh authentication in PowerShell before resuming.
 - A non-fast-forward or remote mismatch is a stop condition; do not pull, rebase, merge, or force push to work around it.
