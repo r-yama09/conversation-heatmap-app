@@ -6,9 +6,19 @@ import { serializeAiHandoffJson } from "@/lib/analytics/aiHandoff";
 
 const HANDOFF_FILENAME = "chatgpt-ai-handoff-v0.1.json";
 
+export type AiHandoffPanelState = "empty" | "ready" | "partial" | "success";
+
+export function getAiHandoffPanelState(hasResult: boolean, isPartial: boolean, hasFeedback: boolean): AiHandoffPanelState {
+  if (!hasResult) return "empty";
+  if (hasFeedback) return "success";
+  return isPartial ? "partial" : "ready";
+}
+
 export default function AiHandoffExportPanel({ result, isPartial }: { result: ParsedExport | null; isPartial: boolean }) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const hasResult = result !== null;
+  const panelState = getAiHandoffPanelState(hasResult, isPartial, feedback !== null);
 
   function download() {
     if (!result) {
@@ -31,13 +41,15 @@ export default function AiHandoffExportPanel({ result, isPartial }: { result: Pa
     }
   }
 
-  return <section className="panel ai-handoff-panel" aria-labelledby="ai-handoff-heading">
+  return <section className="panel ai-handoff-panel" aria-labelledby="ai-handoff-heading" data-state={panelState}>
     <div className="ai-handoff-heading"><div><h2 id="ai-handoff-heading">AI向け引き継ぎJSON</h2><p>会話本文を含めず、集計結果だけを機械可読なJSONとしてこの端末で生成します。</p></div><span className="result-status">schema v0.1</span></div>
-    {isPartial && result && <p className="partial-banner">途中結果であることをJSONにも明記して出力します。</p>}
-    {!result && <p className="ai-handoff-note">解析結果または保存済みデータが未読込のため、まだダウンロードできません。</p>}
-    <div className="ai-handoff-actions"><button type="button" className="button button-secondary ai-handoff-download" onClick={download} disabled={!result} aria-describedby="ai-handoff-privacy-note">引き継ぎJSONをダウンロード</button></div>
-    <p id="ai-handoff-privacy-note" className="ai-handoff-note">元会話本文、メッセージ本文、元ファイル名、ローカルパスは出力しません。</p>
-    {feedback && <p className="ai-handoff-feedback" role="status">{feedback}</p>}
-    {error && <p className="ai-handoff-error" role="alert">{error}</p>}
+    <div className="ai-handoff-content">
+      {isPartial && hasResult && <p className="partial-banner">途中結果であることをJSONにも明記して出力します。</p>}
+      <p className="ai-handoff-availability" id="ai-handoff-availability">{hasResult ? "解析結果からAI向け引き継ぎJSONをダウンロードできます。" : "解析結果または保存済みデータが未読込のため、まだダウンロードできません。"}</p>
+      <div className="ai-handoff-actions"><button type="button" className="button button-secondary ai-handoff-download" onClick={download} disabled={!hasResult} aria-disabled={!hasResult} aria-describedby="ai-handoff-availability ai-handoff-privacy-note">引き継ぎJSONをダウンロード</button></div>
+      <p id="ai-handoff-privacy-note" className="ai-handoff-note">元会話本文、メッセージ本文、元ファイル名、ローカルパスは出力しません。</p>
+      {feedback && <p className="ai-handoff-feedback" role="status">{feedback}</p>}
+      {error && <p className="ai-handoff-error" role="alert">{error}</p>}
+    </div>
   </section>;
 }

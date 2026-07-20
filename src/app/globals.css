@@ -331,11 +331,14 @@ body {
 .ai-handoff-heading > div { min-width:0; }
 .ai-handoff-heading h2 { margin:0; font-size:1.35rem; font-weight:730; letter-spacing:-.03em; }
 .ai-handoff-heading p { margin:8px 0 0; color:var(--text-muted); font-size:.86rem; line-height:1.55; }
-.ai-handoff-actions { display:flex; margin-top:16px; }
+.ai-handoff-content { display:grid; gap:12px; margin-top:16px; }
+.ai-handoff-content > * { margin:0; }
+.ai-handoff-actions { display:flex; }
 .ai-handoff-download { min-height:38px; padding-inline:14px; font-size:.84rem; font-weight:700; box-shadow:none; }
+.ai-handoff-download:disabled { border-style:dashed; background:var(--surface-muted); color:var(--text-muted); opacity:.72; }
 .ai-handoff-download:focus:not(:focus-visible) { outline:0; }
-.ai-handoff-note,.ai-handoff-feedback,.ai-handoff-error { margin:12px 0 0; font-size:.82rem; font-weight:600; line-height:1.5; }
-.ai-handoff-note { color:var(--text-muted); }
+.ai-handoff-availability,.ai-handoff-note,.ai-handoff-feedback,.ai-handoff-error { font-size:.82rem; font-weight:600; line-height:1.5; }
+.ai-handoff-availability,.ai-handoff-note { color:var(--text-muted); }
 .ai-handoff-feedback { display:inline-flex; align-items:center; padding:7px 10px; border:1px solid color-mix(in srgb,var(--success) 30%,var(--border)); border-radius:8px; background:color-mix(in srgb,var(--success) 9%,var(--surface)); color:var(--success); font-size:.78rem; }
 .ai-handoff-error { color:var(--error); }
 .storage-actions { display:flex; flex-wrap:wrap; gap:9px; margin-top:18px; }
